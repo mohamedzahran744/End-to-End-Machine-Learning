@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Insurance Charges Predictor</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gradient-to-br from-blue-50 to-indigo-100 flex justify-center items-center min-h-screen p-4">
+    <div class="bg-white p-8 rounded-2xl shadow-2xl w-full max-w-4xl">
+        <h1 class="text-4xl font-bold text-center mb-8 text-indigo-700">🏥 Insurance Charges Predictor</h1>
+        
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div class="space-y-4">
+                <div>
+                    <label class="block mb-2 font-semibold text-gray-700">Age</label>
+                    <input type="number" id="age" class="w-full p-3 border-2 border-gray-300 rounded-lg focus:border-indigo-500 focus:outline-none" min="18" max="100" value="30">
+                </div>
+                
+                <div>
+                    <label class="block mb-2 font-semibold text-gray-700">Sex</label>
+                    <select id="sex" class="w-full p-3 border-2 border-gray-300 rounded-lg focus:border-indigo-500 focus:outline-none">
+                        <option value="male">Male</option>
+                        <option value="female">Female</option>
+                    </select>
+                </div>
+                
+                <div>
+                    <label class="block mb-2 font-semibold text-gray-700">BMI</label>
+                    <input type="number" id="bmi" class="w-full p-3 border-2 border-gray-300 rounded-lg focus:border-indigo-500 focus:outline-none" min="10" max="50" step="0.1" value="25.0">
+                </div>
+                
+                <div>
+                    <label class="block mb-2 font-semibold text-gray-700">Children</label>
+                    <input type="number" id="children" class="w-full p-3 border-2 border-gray-300 rounded-lg focus:border-indigo-500 focus:outline-none" min="0" max="10" value="0">
+                </div>
+            </div>
+            
+            <div class="space-y-4">
+                <div>
+                    <label class="block mb-2 font-semibold text-gray-700">Smoker</label>
+                    <select id="smoker" class="w-full p-3 border-2 border-gray-300 rounded-lg focus:border-indigo-500 focus:outline-none">
+                        <option value="no">No</option>
+                        <option value="yes">Yes</option>
+                    </select>
+                </div>
+                
+                <div>
+                    <label class="block mb-2 font-semibold text-gray-700">Region</label>
+                    <select id="region" class="w-full p-3 border-2 border-gray-300 rounded-lg focus:border-indigo-500 focus:outline-none">
+                        <option value="northwest">Northwest</option>
+                        <option value="northeast">Northeast</option>
+                        <option value="southeast">Southeast</option>
+                        <option value="southwest">Southwest</option>
+                    </select>
+                </div>
+                
+                <button onclick="predictCharges()" type="button" class="w-full bg-indigo-600 text-white py-4 rounded-lg mt-6 hover:bg-indigo-700 transition-all duration-300 font-bold text-lg shadow-lg hover:shadow-xl transform hover:-translate-y-1">
+                    🔮 Predict Charges
+                </button>
+                
+                <div id="loading" class="hidden text-center">
+                    <div class="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600"></div>
+                    <p class="mt-2 text-gray-600">Calculating...</p>
+                </div>
+                
+                <div id="result" class="hidden mt-6 p-6 bg-gradient-to-r from-green-50 to-emerald-50 rounded-lg border-2 border-green-200">
+                    <p class="text-center font-bold text-3xl text-green-700" id="result-text"></p>
+                    <div class="mt-4 text-sm text-gray-600 space-y-1" id="input-summary"></div>
+                </div>
+                
+                <div id="error" class="hidden mt-6 p-4 bg-red-50 rounded-lg border-2 border-red-200">
+                    <p class="text-center font-semibold text-red-600" id="error-text"></p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+<script>
+async function predictCharges() {
+    // Get input values
+    const data = {
+        age: Number(document.getElementById("age").value),
+        sex: document.getElementById("sex").value.toLowerCase(),
+        bmi: Number(document.getElementById("bmi").value),
+        children: Number(document.getElementById("children").value),
+        smoker: document.getElementById("smoker").value.toLowerCase(),
+        region: document.getElementById("region").value.toLowerCase()
+    };
+
+    console.log("📤 Sending Data:", data);
+    
+    // Show loading, hide results
+    document.getElementById("loading").classList.remove("hidden");
+    document.getElementById("result").classList.add("hidden");
+    document.getElementById("error").classList.add("hidden");
+
+    try {
+        const response = await fetch("/predict/forest", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                "X-API-Key": "c23aa61f80f08b993bf5cb03ac444fdf"
+            },
+            body: JSON.stringify(data)
+        });
+
+        const result = await response.json();
+        console.log("📥 Server Response:", result);
+
+        // Hide loading
+        document.getElementById("loading").classList.add("hidden");
+
+        if (response.ok) {
+            // Show result
+            document.getElementById("result-text").innerText = `$${result.predicted_charges.toLocaleString()}`;
+            
+            // Show input summary
+            document.getElementById("input-summary").innerHTML = `
+                <p><strong>Age:</strong> ${data.age} | <strong>BMI:</strong> ${data.bmi}</p>
+                <p><strong>Children:</strong> ${data.children} | <strong>Smoker:</strong> ${data.smoker}</p>
+                <p><strong>Sex:</strong> ${data.sex} | <strong>Region:</strong> ${data.region}</p>
+            `;
+            
+            document.getElementById("result").classList.remove("hidden");
+        } else {
+            // Show error
+            document.getElementById("error-text").innerText = `Error: ${result.detail}`;
+            document.getElementById("error").classList.remove("hidden");
+        }
+    } catch (err) {
+        console.error("❌ Error:", err);
+        document.getElementById("loading").classList.add("hidden");
+        document.getElementById("error-text").innerText = `Network Error: ${err.message}`;
+        document.getElementById("error").classList.remove("hidden");
+    }
+}
+
+// Allow Enter key to submit
+document.addEventListener('keypress', function(e) {
+    if (e.key === 'Enter') {
+        predictCharges();
+    }
+});
+</script>
+
+</body>
+</html>
